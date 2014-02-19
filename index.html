@@ -1,23 +1,134 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Todo List App</title>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+        <script src="js/jquery-1.10.2.js"></script>
+        <script>
+/////
+///Save Data Function
+/////
+function saveData(){
+    //Our text field data
+    var txtName = $('#txtName').val();
+    var intAge = $('#intAge').val();
+    var txtColour = $('#txtColour').val();
+    
+    //Check databases are supported
+    if(openDatabase){
+        //Open a database transaction
+        db.transaction(function(tx){
+            //Execute an SQL statement to create the table "tblDemo" 
+            //only if it doesn't already exist                
+            tx.executeSql('CREATE TABLE IF NOT EXISTS tblDemo ('
+                           + 'personId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,'
+                           + 'personName VARCHAR(255),'
+                           + 'personAge INTEGER,'
+                           + 'personColour VARCHAR(255)'
+                           + ');',[],nullData,errorHandler);
+        });
+        
+        //Open a new transaction
+        db.transaction(function(tx){
+            //Exexute an INSERT with the name, age and favourite colour, 
+            //we set values outside the SQL string for added security and 
+            //to prevent SQL injections, the values are represented with "?"
+            tx.executeSql('INSERT INTO tblDemo ('
+                           + 'personName, personAge, personColour)'
+                           + 'VALUES (?, ?, ?);'
+                           ,[txtName,intAge,txtColour],nullData,errorHandler);
+        });
+    }
+}
 
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div id="page-wrapper">
-    <!-- Form for new Todo Items -->
-    <form id="new-todo-form" method="POST" action="#">
-      <input type="text" name="new-todo" id="new-todo" placeholder="Enter a todo item..." required>
-    </form>
-  
-    <!-- Todo Item List -->
-    <ul id="todo-items"></ul>
-  </div>
+/////
+///Get Data Function
+/////
+function getData(){
+    //Create an empty results string
+    var strResults = '';
+    
+    //Open a new transaction
+    db.transaction(function(tx){
+        //Select a wildcard from the database
+        tx.executeSql('SELECT * FROM tblDemo'
+                       ,[]
+                       //Callback function with transaction and 
+                       //results objects
+                       ,function(tx, results){
+                            //Count the results rows
+                            var rowsCount = results.rows.length;  
+                            //Loop the rows
+                            for (var i = 0; i < rowsCount; i++){
+                                //Build a results string, notice the 
+                                //column names are called
+                                strResults += '<p>Your Name is<b> '
+                                              + results.rows.item(i).personName
+                                              + '</b> Your ID is<b> '
+                                              + results.rows.item(i).personId
+                                              + '</b> Your age is<b> '
+                                              + results.rows.item(i).personAge
+                                              + '</b> Your favourite colour is<b> '
+                                              + results.rows.item(i).personColour
+                                              + '</b></p>';
+                            }
+                            //Fill the results DIV 
+                            $('.results').html(strResults);
+                        }
+                       ,errorHandler);
+    });
+}
 
-  <script src="db.js"></script>
-  <script src="app.js"></script>
-</body>
+/////
+///Error Handler
+/////
+function errorHandler(transaction, error) {
+    //Log the error
+    console.log('Error: ' + error.message + ' (Code ' + error.code + ')');
+}
+
+/////
+///Null Data
+/////
+function nullData(){
+    //Can be used for callbacks etc
+}
+/////
+///Document Ready 
+/////
+$(document).ready(function(){
+    //Bind events to the buttons to fire off the functions                       
+    $('#btnSave').bind('click' , saveData);
+    $('#btnGet').bind('click' , getData);
+    
+    //Open the database 
+    if(openDatabase){
+        db = openDatabase('Database Name' , '1.0' , 'Database Description' , 2 * 1024 * 1024);
+    }
+    //Alert the user to upgrade their browser
+    else {
+        alert('Databases not supported. Please get a proper browser');
+    }
+    
+});
+        </script>
+    </head>
+    <body>
+<input type="text" id="txtName" placeholder="Enter Your Name" />
+
+<input type="text" id="intAge" placeholder="Enter Your Age" />
+
+<input type="text" id="txtColour" placeholder="Enter Your Favourite Colour" />
+
+<input type="submit" value="Save" id="btnSave" />
+<input type="submit" value="Get Data" id="btnGet" />
+
+<div class="results"></div>
+    </body>
 </html>
